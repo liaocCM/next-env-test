@@ -42,18 +42,25 @@ gcloud run deploy next-env-test \
 
 After deploying with `--set-env-vars SERVER_ONLY_TEST=SOT,NEXT_PUBLIC_TEST=hello`:
 
-- Visit `/` — displays `Client NEXT_PUBLIC_TEST:` with **no value** (the image was built without the var).
+- Visit `/` — displays `Client NEXT_PUBLIC_TEST:` with **no value**.
 - Visit `/api/debug` — returns:
   ```json
   { "server_env": "SOT" }
   ```
-  `NEXT_PUBLIC_TEST` is not included because it was not set at runtime — it is only available if inlined at build time.
+
+### Why `NEXT_PUBLIC_TEST` is empty
+
+`NEXT_PUBLIC_*` vars **do not work at runtime**. During `next build`, Next.js finds every reference to `process.env.NEXT_PUBLIC_*` and **replaces it with the actual value** inline in the JavaScript bundle. After the build, the value is hardcoded — changing the env var at deploy time has no effect on client-side code.
+
+Since the Docker image was built **without** `NEXT_PUBLIC_TEST` set, the value was replaced with `undefined` at build time and stays that way regardless of what Cloud Run's `--set-env-vars` provides.
+
+`SERVER_ONLY_TEST` works fine because server-side code reads `process.env` at runtime as usual.
+
+See: [Next.js Environment Variables docs](https://nextjs.org/docs/pages/guides/environment-variables)
 
 ## Environment Variables
 
-| Variable | Type | Available At |
-|---|---|---|
-| `NEXT_PUBLIC_TEST` | Public | Build time (inlined into client JS) |
-| `SERVER_ONLY_TEST` | Server-only | Runtime (accessible in API routes / server components) |
-
-> **Note:** `NEXT_PUBLIC_*` vars are baked into the client bundle at build time. Setting them via `--set-env-vars` at deploy time will only affect server-side reads. To change client-side values, rebuild the image with the new value.
+| Variable | How it works |
+|---|---|
+| `NEXT_PUBLIC_TEST` | Inlined into client JS at **build time**. Must be set when running `next build`. Cannot be changed at deploy/runtime. |
+| `SERVER_ONLY_TEST` | Read at **runtime**. Set via Cloud Run `--set-env-vars` and it just works. |
