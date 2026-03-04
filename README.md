@@ -38,6 +38,17 @@ gcloud run deploy next-env-test \
   --set-env-vars SERVER_ONLY_TEST=SOT,NEXT_PUBLIC_TEST=hello
 ```
 
+## Testing
+
+After deploying with `--set-env-vars SERVER_ONLY_TEST=SOT,NEXT_PUBLIC_TEST=hello`:
+
+- Visit `/` — displays `Client NEXT_PUBLIC_TEST:` with **no value** (the image was built without the var).
+- Visit `/api/debug` — returns:
+  ```json
+  { "server_env": "SOT" }
+  ```
+  `NEXT_PUBLIC_TEST` is not included because it was not set at runtime — it is only available if inlined at build time.
+
 ## Environment Variables
 
 | Variable | Type | Available At |
